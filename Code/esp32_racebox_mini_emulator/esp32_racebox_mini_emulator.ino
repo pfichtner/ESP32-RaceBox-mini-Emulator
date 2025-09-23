@@ -17,6 +17,8 @@ using namespace bfs;
 // --- MPU6050 Configuration ---
 #define MPU_SDA_PIN 4
 #define MPU_SCL_PIN 5
+// if board is mounted overhead
+#define IMU_MOUNTED_OVERHEAD
 
 SFE_UBLOX_GNSS myGNSS;
 #ifdef CONFIG_IDF_TARGET_ESP32H2
@@ -323,6 +325,17 @@ void loop() {
         float gx = mpu.gyro_radps()[0];
         float gy = mpu.gyro_radps()[1];
         float gz = mpu.gyro_radps()[2];
+
+#ifdef IMU_MOUNTED_OVERHEAD
+        // Flip all axes if board is mounted overhead (180° rotation)
+        ax = -ax;
+        ay = -ay;
+        az = -az;
+
+        gx = -gx;
+        gy = -gy;
+        gz = -gz;
+#endif
 
         // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
         // int16_t gX = ax * 1000.0 / 9.80665;
