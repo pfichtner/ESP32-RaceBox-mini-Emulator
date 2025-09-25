@@ -6,6 +6,7 @@ using namespace bfs;
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include <NimBLEDevice.h>
 #include <SimpleKalmanFilter.h>
+#include "Config.h"
 #include "StatusLED.h"
 
 // --- GPS Configuration ---
@@ -28,18 +29,6 @@ HardwareSerial GPS_Serial(1); // UART1
 #else
 HardwareSerial GPS_Serial(2); // UART2
 #endif
-// --- Enable GNSS constellations ---
-// The specific constellations available depend on your u-blox module 
-// and how many you can turn on depend on your u-blox module 
-// Common ones are GPS, Galileo, GLONASS, BeiDou, QZSS, SBAS.
-// check this out for which constellations to enable https://app.qzss.go.jp/GNSSView/gnssview.html
-
-#define ENABLE_GNSS_GPS
-#define ENABLE_GNSS_GALILEO
-// #define ENABLE_GNSS_GLONASS
-// #define ENABLE_GNSS_BEIDOU
-// #define ENABLE_GNSS_SBAS
-// #define ENABLE_GNSS_QZSS
 
 const String deviceName = "RaceBox Mini 0123456789";
 
@@ -175,6 +164,7 @@ void resetGpsBaudRate() {
 void setup() {
   Serial.begin(115200);
   ledSetup();
+  configSetup();
   currentState = STATE_BOOT; 
   Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
 
@@ -220,41 +210,12 @@ void setup() {
       }
   };
 
-  #ifdef ENABLE_GNSS_GPS
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_GPS,     "GPS");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_GPS,     "GPS");
-  #endif
-
-  #ifdef ENABLE_GNSS_GALILEO
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_GALILEO, "Galileo");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_GALILEO, "Galileo");
-  #endif
-
-  #ifdef ENABLE_GNSS_GLONASS
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_GLONASS, "GLONASS");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_GLONASS, "GLONASS");
-  #endif
-
-  #ifdef ENABLE_GNSS_BEIDOU
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_BEIDOU,  "BeiDou");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_BEIDOU,  "BeiDou");
-  #endif
-
-  #ifdef ENABLE_GNSS_SBAS
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_SBAS,    "SBAS");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_SBAS,    "SBAS");
-  #endif
-
-  #ifdef ENABLE_GNSS_QZSS
-  applyGnss(true,  SFE_UBLOX_GNSS_ID_QZSS,    "QZSS");
-  #else
-  applyGnss(false, SFE_UBLOX_GNSS_ID_QZSS,    "QZSS");
-  #endif
+  applyGnss(gnssConfig.gps,     SFE_UBLOX_GNSS_ID_GPS,     "GPS");
+  applyGnss(gnssConfig.galileo, SFE_UBLOX_GNSS_ID_GALILEO, "Galileo");
+  applyGnss(gnssConfig.glonass, SFE_UBLOX_GNSS_ID_GLONASS, "GLONASS");
+  applyGnss(gnssConfig.beidou,  SFE_UBLOX_GNSS_ID_BEIDOU,  "BeiDou");
+  applyGnss(gnssConfig.sbas,    SFE_UBLOX_GNSS_ID_SBAS,    "SBAS");
+  applyGnss(gnssConfig.qzss,    SFE_UBLOX_GNSS_ID_QZSS,    "QZSS");
 
   // --- BLE Setup ---
   NimBLEDevice::init(deviceName.c_str());
