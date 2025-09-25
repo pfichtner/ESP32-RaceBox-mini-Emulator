@@ -49,10 +49,12 @@ SimpleKalmanFilter kf_gz(1.0, 1.0, 0.99);
 const char* const RACEBOX_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
 const char* const RACEBOX_CHARACTERISTIC_RX_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 const char* const RACEBOX_CHARACTERISTIC_TX_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
+const char* const RACEBOX_CHARACTERISTIC_GNSS_UUID = "6E400004-B5A3-F393-E0A9-E50E24DCCA9E";
 
 NimBLEServer* pServer = nullptr;
 NimBLECharacteristic* pCharacteristicTx = nullptr;
 NimBLECharacteristic* pCharacteristicRx = nullptr;
+NimBLECharacteristic* pCharacteristicGnss = nullptr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
@@ -64,6 +66,24 @@ unsigned int gpsUpdateCount = 0;
 const unsigned long GPS_RATE_REPORT_INTERVAL_MS = 5000;
 unsigned int gnssUpdateCount = 0;
 
+void applyGnssConfig() {
+  auto applyGnss = [&](bool enabled, sfe_ublox_gnss_ids_e id, const char* name) {
+      const char* state = enabled ? "enabled" : "disabled";
+      const char* icon  = enabled ? "✅" : "🚫";
+      if (myGNSS.enableGNSS(enabled, id)) {
+          Serial.printf("%s %s %s\n", icon, name, state);
+      } else {
+          Serial.printf("❌ Failed to %s %s\n", state, name);
+      }
+  };
+
+  applyGnss(gnssConfig.gps,     SFE_UBLOX_GNSS_ID_GPS,     "GPS");
+  applyGnss(gnssConfig.galileo, SFE_UBLOX_GNSS_ID_GALILEO, "Galileo");
+  applyGnss(gnssConfig.glonass, SFE_UBLOX_GNSS_ID_GLONASS, "GLONASS");
+  applyGnss(gnssConfig.beidou,  SFE_UBLOX_GNSS_ID_BEIDOU,  "BeiDou");
+  applyGnss(gnssConfig.sbas,    SFE_UBLOX_GNSS_ID_SBAS,    "SBAS");
+  applyGnss(gnssConfig.qzss,    SFE_UBLOX_GNSS_ID_QZSS,    "QZSS");
+}
 
 // --- BLE Callbacks ---
 class MyServerCallbacks : public NimBLEServerCallbacks {
@@ -88,6 +108,39 @@ public:
       Serial.println();
     }
   }
+};
+
+class GnssCharacteristicCallbacks : public NimBLECharacteristicCallbacks {
+public:
+    void onWrite(NimBLECharacteristic* pCharacteristic) {
+        std::string value = pCharacteristic->getValue();
+        if (value.size() != sizeof(GnssConfig)) {
+            Serial.println("❌ Invalid GNSS config length");
+            return;
+        }
+
+        // Copy received bytes into gnssConfig
+        memcpy(&gnssConfig, value.data(), sizeof(GnssConfig));
+        Serial.println("📨 GNSS config updated via BLE");
+
+        // Apply immediately
+        applyGnssConfig();
+
+        // Persist to SPIFFS
+        saveGnssConfig(gnssConfig);
+
+        // Send back updated GNSS config to BLE client
+        if (pCharacteristic->getProperties() & NIMBLE_PROPERTY::NOTIFY) {
+            pCharacteristic->setValue((uint8_t*)&gnssConfig, sizeof(GnssConfig));
+            pCharacteristic->notify();
+            Serial.println("📤 GNSS config sent back via BLE notification");
+        }
+    }
+
+    void onRead(NimBLECharacteristic* pCharacteristic) {
+        pCharacteristic->setValue((uint8_t*)&gnssConfig, sizeof(GnssConfig));
+        Serial.println("📤 GNSS config read via BLE");
+    }
 };
 
 // --- UBX Packet Construction Helpers ---
@@ -200,22 +253,7 @@ void setup() {
 
   // --- GNSS Constellation Setup ---
 
-  auto applyGnss = [&](bool enabled, sfe_ublox_gnss_ids_e id, const char* name) {
-      const char* state = enabled ? "enabled" : "disabled";
-      const char* icon  = enabled ? "✅" : "🚫";
-      if (myGNSS.enableGNSS(enabled, id)) {
-          Serial.printf("%s %s %s\n", icon, name, state);
-      } else {
-          Serial.printf("❌ Failed to %s %s\n", state, name);
-      }
-  };
-
-  applyGnss(gnssConfig.gps,     SFE_UBLOX_GNSS_ID_GPS,     "GPS");
-  applyGnss(gnssConfig.galileo, SFE_UBLOX_GNSS_ID_GALILEO, "Galileo");
-  applyGnss(gnssConfig.glonass, SFE_UBLOX_GNSS_ID_GLONASS, "GLONASS");
-  applyGnss(gnssConfig.beidou,  SFE_UBLOX_GNSS_ID_BEIDOU,  "BeiDou");
-  applyGnss(gnssConfig.sbas,    SFE_UBLOX_GNSS_ID_SBAS,    "SBAS");
-  applyGnss(gnssConfig.qzss,    SFE_UBLOX_GNSS_ID_QZSS,    "QZSS");
+  applyGnssConfig();
 
   // --- BLE Setup ---
   NimBLEDevice::init(deviceName.c_str());
@@ -226,6 +264,9 @@ void setup() {
   pCharacteristicTx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_TX_UUID, NIMBLE_PROPERTY::NOTIFY);
   pCharacteristicRx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_RX_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   pCharacteristicRx->setCallbacks(new MyCharacteristicCallbacks());
+
+  pCharacteristicGnss = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_GNSS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
+  pCharacteristicGnss->setCallbacks(new GnssCharacteristicCallbacks());
 
   pService->start();
   NimBLEDevice::setDeviceName(deviceName.c_str());
