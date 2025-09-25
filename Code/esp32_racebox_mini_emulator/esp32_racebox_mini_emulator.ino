@@ -14,6 +14,7 @@ using namespace bfs;
 #define GPS_BAUD 115200
 #define FACTORY_GPS_BAUD 9600
 #define MAX_NAVIGATION_RATE 25
+// #define GPS_SERIAL_PACKET_RATE_DEBUG
 
 // --- MPU6050 Configuration ---
 #define MPU_SDA_PIN 4
@@ -487,7 +488,9 @@ void loop() {
     if ((now - lastGpsRateCheckTime) >= GPS_RATE_REPORT_INTERVAL_MS) {
       float bleRate = gpsUpdateCount / (GPS_RATE_REPORT_INTERVAL_MS / 1000.0);
       float gnssRate = gnssUpdateCount / (GPS_RATE_REPORT_INTERVAL_MS / 1000.0);
+#ifdef GPS_SERIAL_PACKET_RATE_DEBUG
       Serial.printf("BLE Packet Rate: %.2f Hz | GNSS Update Rate: %.2f Hz\n", bleRate, gnssRate);
+#endif
       gpsUpdateCount = 0;
       gnssUpdateCount = 0;
       lastGpsRateCheckTime = now;
