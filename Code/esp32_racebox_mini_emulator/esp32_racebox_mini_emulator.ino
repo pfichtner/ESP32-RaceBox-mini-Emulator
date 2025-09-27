@@ -1,10 +1,7 @@
-#include "eigen.h"
-#include "units.h"
-#include "mpu9250.h"
-using namespace bfs;
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include <NimBLEDevice.h>
+#include "SensorInterface.h"
 #include <SimpleKalmanFilter.h>
 #include "Config.h"
 #include "StatusLED.h"
@@ -17,7 +14,11 @@ using namespace bfs;
 #define MAX_NAVIGATION_RATE 25
 // #define GPS_SERIAL_PACKET_RATE_DEBUG
 
-// --- MPU6050 Configuration ---
+// Which sensor to use
+#define USE_MPU6050
+// #define USE_MPU9250
+
+// --- MPU6050/MPU9250 Configuration ---
 #define MPU_SDA_PIN 4
 #define MPU_SCL_PIN 5
 // if board is mounted overhead
@@ -32,7 +33,16 @@ HardwareSerial GPS_Serial(2); // UART2
 
 const String deviceName = "RaceBox Mini 0123456789";
 
-bfs::Mpu9250 mpu(&Wire, bfs::Mpu9250::I2C_ADDR_PRIM);
+#if defined(USE_MPU6050)
+  #include "Mpu6050Adapter.h"
+  SensorInterface* sensor = new Mpu6050Adapter(&Wire);
+#elif defined(USE_MPU9250)
+  #include "Mpu9250Adapter.h"
+  SensorInterface* sensor = new Mpu9250Adapter(&Wire);
+#else
+  #error "You must define either USE_MPU6050 or USE_MPU9250"
+#endif
+
 // Kalman filters for accelerometer (x, y, z)
 SimpleKalmanFilter kf_ax(1.0, 1.0, 0.99);
 SimpleKalmanFilter kf_ay(1.0, 1.0, 0.99);
@@ -215,14 +225,11 @@ void setup() {
   setLedState(STATE_BOOT);
   Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
 
-  if (mpu.Begin() != 0) {
-    Serial.println("❌ Failed to find MPU9250 chip");
+  if (!sensor->begin()) {
+    Serial.println("❌ Failed to init mpu sensor");
     setLedState(STATE_ERROR);
     while (1) delay(100);
   }
-  mpu.ConfigAccelRange(bfs::Mpu9250::ACCEL_RANGE_8G);
-  mpu.ConfigGyroRange(bfs::Mpu9250::GYRO_RANGE_500DPS);
-  mpu.ConfigDlpfBandwidth(bfs::Mpu9250::DLPF_BANDWIDTH_20HZ);
 
   GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   if (!myGNSS.begin(GPS_Serial)) {
@@ -310,48 +317,36 @@ void loop() {
         lastPacketSendTime = now;
         gpsUpdateCount++;
 
+        SensorData data;
         // Now that we're sending a packet, read the acceloromter
-        if (!mpu.Read()) {
+        if (!sensor->read(data)) {
           return;
         }
-        float ax = mpu.accel_mps2()[0];
-        float ay = mpu.accel_mps2()[1];
-        float az = mpu.accel_mps2()[2];
-
-        float gx = mpu.gyro_radps()[0];
-        float gy = mpu.gyro_radps()[1];
-        float gz = mpu.gyro_radps()[2];
 
 #ifdef IMU_MOUNTED_OVERHEAD
         // Flip all axes if board is mounted overhead (180° rotation)
-        ax = -ax;
-        ay = -ay;
-        az = -az;
-
-        gx = -gx;
-        gy = -gy;
-        gz = -gz;
+        data.flipOverhead();
 #endif
 
         // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        // int16_t gX = ax * 1000.0 / 9.80665;
-        // int16_t gY = ay * 1000.0 / 9.80665;
-        // int16_t gZ = az * 1000.0 / 9.80665;
+        // int16_t gX = data.ax * 1000.0 / 9.80665;
+        // int16_t gY = data.ay * 1000.0 / 9.80665;
+        // int16_t gZ = data.az * 1000.0 / 9.80665;
 
         // // Convert gyro to centi-deg/sec
-        // int16_t rX = gx * 180.0 / M_PI * 100.0;
-        // int16_t rY = gy * 180.0 / M_PI * 100.0;
-        // int16_t rZ = gz * 180.0 / M_PI * 100.0;
+        // int16_t rX = data.gx * 180.0 / M_PI * 100.0;
+        // int16_t rY = data.gy * 180.0 / M_PI * 100.0;
+        // int16_t rZ = data.gz * 180.0 / M_PI * 100.0;
 
         // Convert accelerometer to milli-g
-        int16_t gX = kf_ax.updateEstimate(ax) * 1000.0 / 9.80665;
-        int16_t gY = kf_ay.updateEstimate(ay) * 1000.0 / 9.80665;
-        int16_t gZ = kf_az.updateEstimate(az) * 1000.0 / 9.80665;
+        int16_t gX = kf_ax.updateEstimate(data.ax) * 1000.0 / 9.80665;
+        int16_t gY = kf_ay.updateEstimate(data.ay) * 1000.0 / 9.80665;
+        int16_t gZ = kf_az.updateEstimate(data.az) * 1000.0 / 9.80665;
 
         // Convert gyro to centi-deg/sec
-        int16_t rX = kf_gx.updateEstimate(gx) * 180.0 / M_PI * 100.0;
-        int16_t rY = kf_gy.updateEstimate(gy) * 180.0 / M_PI * 100.0;
-        int16_t rZ = kf_gz.updateEstimate(gz) * 180.0 / M_PI * 100.0;
+        int16_t rX = kf_gx.updateEstimate(data.gx) * 180.0 / M_PI * 100.0;
+        int16_t rY = kf_gy.updateEstimate(data.gy) * 180.0 / M_PI * 100.0;
+        int16_t rZ = kf_gz.updateEstimate(data.gz) * 180.0 / M_PI * 100.0;
 
         uint8_t payload[80] = {0};
         uint8_t packet[88] = {0};
