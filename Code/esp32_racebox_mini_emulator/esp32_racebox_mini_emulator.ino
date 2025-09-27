@@ -177,25 +177,18 @@ void resetGpsBaudRate() {
   delay(500);
 
   if (!myGNSS.begin(GPS_Serial)) {
-    Serial.print("u-blox GNSS not detected at ");
-    Serial.print(FACTORY_GPS_BAUD);
-    Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
+    Serial.printf("u-blox GNSS not detected at %d baud!\n", FACTORY_GPS_BAUD);
+    Serial.print("Check documentation for factory baud rate and/or check your wiring");
     while (1) delay(100);
   } else {
-    Serial.print("GNSS detected at ");
-    Serial.print(FACTORY_GPS_BAUD);
-    Serial.println(" baud!");
+    Serial.printf("GNSS detected at %d baud!\n", FACTORY_GPS_BAUD);
   }
   delay(500);
 
   // Now switch baud rate
-  Serial.print("Setting baud rate to ");
-  Serial.print(GPS_BAUD);
-  Serial.println("...");
+  Serial.printf("Setting baud rate to %d baud...\n", GPS_BAUD);
   myGNSS.setSerialRate(GPS_BAUD);
-  Serial.print("Baud rate changed to ");
-  Serial.println(GPS_BAUD);
+  Serial.printf("Baud rate changed to %d baud\n", GPS_BAUD);
 
   GPS_Serial.end();
   delay(100);
@@ -204,16 +197,12 @@ void resetGpsBaudRate() {
   delay(500);
 
   if (!myGNSS.begin(GPS_Serial)) {
-    Serial.print("GNSS not detected at ");
-    Serial.print(GPS_BAUD);
-    Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
+    Serial.printf("GNSS not detected at %d baud.\n", GPS_BAUD);
+    Serial.print("Check documentation for factory baud rate and/or check your wiring");
     setLedState(STATE_ERROR);
     while (1) delay(100);
   }
-  Serial.print("GNSS detected at ");
-  Serial.print(GPS_BAUD);
-  Serial.println(" baud! Saving to Flash");
+  Serial.printf("GNSS detected at %d  baud! Saving to Flash.\n", GPS_BAUD);
   myGNSS.saveConfiguration(); // Save to flash
   GPS_Serial.end();
 }
