@@ -172,41 +172,46 @@ void calculateChecksum(uint8_t* payload, uint16_t len, uint8_t cls, uint8_t id, 
 }
 
 void resetGpsBaudRate() {
-  Serial.println("Attempting to set Correct Baud Rate");
-  GPS_Serial.begin(FACTORY_GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  delay(500);
+    Serial.println("Attempting to set correct factory baud rate...");
 
-  if (!myGNSS.begin(GPS_Serial)) {
-    Serial.printf("u-blox GNSS not detected at %d baud!\n", FACTORY_GPS_BAUD);
-    Serial.print("Check documentation for factory baud rate and/or check your wiring");
-    setLedState(STATE_ERROR);
-    while (1) delay(100);
-  } else {
+    // Initialize at factory baud
+    GPS_Serial.begin(FACTORY_GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    delay(500);
+
+    // Retry until GNSS responds at factory baud
+    while (!myGNSS.begin(GPS_Serial)) {
+        Serial.printf("u-blox GNSS not detected at %d baud! Retrying...\n", FACTORY_GPS_BAUD);
+        setLedState(STATE_ERROR);
+        delay(500);
+    }
+
     Serial.printf("GNSS detected at %d baud!\n", FACTORY_GPS_BAUD);
-  }
-  delay(500);
+    delay(500);
 
-  // Now switch baud rate
-  Serial.printf("Setting baud rate to %d baud...\n", GPS_BAUD);
-  myGNSS.setSerialRate(GPS_BAUD);
-  Serial.printf("Baud rate changed to %d baud\n", GPS_BAUD);
+    // Now switch baud rate
+    Serial.printf("Setting baud rate to %d baud...\n", GPS_BAUD);
+    myGNSS.setSerialRate(GPS_BAUD);
+    Serial.printf("Baud rate changed to %d baud\n", GPS_BAUD);
 
-  GPS_Serial.end();
-  delay(100);
-  // Re-initialize the serial port at the new baud rate
-  GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  delay(500);
+    GPS_Serial.end();
+    delay(100);
 
-  if (!myGNSS.begin(GPS_Serial)) {
-    Serial.printf("GNSS not detected at %d baud.\n", GPS_BAUD);
-    Serial.print("Check documentation for factory baud rate and/or check your wiring");
-    setLedState(STATE_ERROR);
-    while (1) delay(100);
-  }
-  Serial.printf("GNSS detected at %d  baud! Saving to Flash.\n", GPS_BAUD);
-  myGNSS.saveConfiguration(); // Save to flash
-  GPS_Serial.end();
+    // Re-initialize the serial port at the new baud
+    GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    delay(500);
+
+    // Retry until GNSS responds at new baud
+    while (!myGNSS.begin(GPS_Serial)) {
+        Serial.printf("GNSS not detected at %d baud! Retrying...\n", GPS_BAUD);
+        setLedState(STATE_ERROR);
+        delay(500);
+    }
+
+    Serial.printf("GNSS detected at %d baud! Saving configuration to Flash.\n", GPS_BAUD);
+    myGNSS.saveConfiguration(); // Save to flash
+    GPS_Serial.end();
 }
+
 
 void setup() {
   Serial.begin(115200);
