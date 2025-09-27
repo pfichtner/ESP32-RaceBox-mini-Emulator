@@ -14,7 +14,6 @@
 extern uint8_t currentState;
 
 void ledSetup();
-void updateLed();
-void setLedColor(uint32_t color);
+void setLedState(uint8_t state);
 
 #endif

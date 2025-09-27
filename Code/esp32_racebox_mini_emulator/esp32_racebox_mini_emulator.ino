@@ -171,10 +171,7 @@ void resetGpsBaudRate() {
     Serial.print(FACTORY_GPS_BAUD);
     Serial.println(" baud.");
     Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
-    while (1) {
-      updateLed();
-      delay(50);
-    }
+    while (1) delay(100);
   } else {
     Serial.print("GNSS detected at ");
     Serial.print(FACTORY_GPS_BAUD);
@@ -201,11 +198,8 @@ void resetGpsBaudRate() {
     Serial.print(GPS_BAUD);
     Serial.println(" baud.");
     Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
-    currentState = STATE_ERROR;
-    while (1) {
-      updateLed();
-      delay(50);
-    }
+    setLedState(STATE_ERROR);
+    while (1) delay(100);
   }
   Serial.print("GNSS detected at ");
   Serial.print(GPS_BAUD);
@@ -218,16 +212,13 @@ void setup() {
   Serial.begin(115200);
   ledSetup();
   configSetup();
-  currentState = STATE_BOOT; 
+  setLedState(STATE_BOOT);
   Wire.begin(MPU_SDA_PIN, MPU_SCL_PIN);
 
   if (mpu.Begin() != 0) {
     Serial.println("❌ Failed to find MPU9250 chip");
-    currentState = STATE_ERROR;
-    while (1) {
-      updateLed();
-      delay(50);
-    }
+    setLedState(STATE_ERROR);
+    while (1) delay(100);
   }
   mpu.ConfigAccelRange(bfs::Mpu9250::ACCEL_RANGE_8G);
   mpu.ConfigGyroRange(bfs::Mpu9250::GYRO_RANGE_500DPS);
@@ -292,7 +283,11 @@ void setup() {
 
 void loop() {
   // default to searching while no fix
-  currentState = STATE_GNSS_SEARCH;
+  if (!deviceConnected) {
+      setLedState(STATE_GNSS_SEARCH);
+  } else if (deviceConnected) {
+      setLedState(STATE_BLE_CONNECTED);
+  }
   myGNSS.checkUblox(); // Required to keep GNSS data flowing
   if (myGNSS.getPVT()) {
     static uint32_t lastITOW = 0;
@@ -301,9 +296,9 @@ void loop() {
     // Update LED based on GNSS fix type
     uint8_t fix = myGNSS.packetUBXNAVPVT->data.fixType;
     if (fix == 2) {
-        currentState = STATE_GNSS_2D;
+        setLedState(STATE_GNSS_2D);
     } else if (fix >= 3) {
-        currentState = STATE_GNSS_3D;
+        setLedState(STATE_GNSS_3D);
     }
 
     if (currentITOW != lastITOW) {
@@ -481,8 +476,4 @@ void loop() {
       oldDeviceConnected = deviceConnected;
     }
   }
-  // BLE overrides
-  if (deviceConnected) currentState = STATE_BLE_CONNECTED;
-
-  updateLed();
 }
