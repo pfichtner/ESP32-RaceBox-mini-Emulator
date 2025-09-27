@@ -179,6 +179,7 @@ void resetGpsBaudRate() {
   if (!myGNSS.begin(GPS_Serial)) {
     Serial.printf("u-blox GNSS not detected at %d baud!\n", FACTORY_GPS_BAUD);
     Serial.print("Check documentation for factory baud rate and/or check your wiring");
+    setLedState(STATE_ERROR);
     while (1) delay(100);
   } else {
     Serial.printf("GNSS detected at %d baud!\n", FACTORY_GPS_BAUD);
