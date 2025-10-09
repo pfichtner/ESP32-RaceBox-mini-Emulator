@@ -279,11 +279,7 @@ void setup() {
 
 void loop() {
   // default to searching while no fix
-  if (!deviceConnected) {
-      setLedState(STATE_GNSS_SEARCH);
-  } else if (deviceConnected) {
-      setLedState(STATE_BLE_CONNECTED);
-  }
+  uint8_t state = STATE_GNSS_SEARCH;
   myGNSS.checkUblox(); // Required to keep GNSS data flowing
   if (myGNSS.getPVT()) {
     static uint32_t lastITOW = 0;
@@ -292,9 +288,9 @@ void loop() {
     // Update LED based on GNSS fix type
     uint8_t fix = myGNSS.packetUBXNAVPVT->data.fixType;
     if (fix == 2) {
-        setLedState(STATE_GNSS_2D);
+        state = STATE_GNSS_2D;
     } else if (fix >= 3) {
-        setLedState(STATE_GNSS_3D);
+        state = STATE_GNSS_3D;
     }
 
     if (currentITOW != lastITOW) {
@@ -460,4 +456,8 @@ void loop() {
       oldDeviceConnected = deviceConnected;
     }
   }
+  if (deviceConnected) {
+    state = STATE_BLE_CONNECTED;
+  }
+  setLedState(state);
 }
