@@ -1,6 +1,9 @@
 # Open Source RaceBox Mini Emulator
 > **Disclaimer:** This project is independent and open-source. It is not affiliated with, endorsed by, or officially connected to RaceBox. The name “RaceBox Mini” is used only to describe compatibility.
 
+# This is a fork of https://github.com/anchit92/ESP32-RaceBox-mini-Emulator
+The reason is the addition of support for esp32 h2, which can be found in the [esp32h2 branch](https://github.com/pfichtner/ESP32-RaceBox-mini-Emulator/tree/esp32h2).
+
 ## Overview
 
 This project provides firmware for an ESP32-based device that acts as a high-performance GPS/IMU  Bluetooth Low Energy (BLE) broadcaster. It integrates a U-blox GNSS module for precise position, velocity, and timing data at 25Hz, along with an MPU6050 accelerometer and gyroscope for motion sensing. All collected data is streamed over BLE, making it ideal for applications like vehicle performance analysis, lap timing, or real-time telemetry.
