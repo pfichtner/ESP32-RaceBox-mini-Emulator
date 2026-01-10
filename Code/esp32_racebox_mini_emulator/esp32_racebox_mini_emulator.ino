@@ -2,7 +2,6 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include <NimBLEDevice.h>
 #include "SensorInterface.h"
-#include <SimpleKalmanFilter.h>
 #include "Config.h"
 #include "StatusLED.h"
 
@@ -43,15 +42,15 @@ const String deviceName = "RaceBox Mini 0123456789";
   #error "You must define either USE_MPU6050 or USE_MPU9250"
 #endif
 
-// Kalman filters for accelerometer (x, y, z)
-SimpleKalmanFilter kf_ax(1.0, 1.0, 0.99);
-SimpleKalmanFilter kf_ay(1.0, 1.0, 0.99);
-SimpleKalmanFilter kf_az(1.0, 1.0, 0.99);
-
-// Kalman filters for gyroscope (x, y, z)
-SimpleKalmanFilter kf_gx(1.0, 1.0, 0.99);
-SimpleKalmanFilter kf_gy(1.0, 1.0, 0.99);
-SimpleKalmanFilter kf_gz(1.0, 1.0, 0.99);
+// --- Smoothing Configuration ---
+// alpha = 1.0: No filtering (raw data)
+// alpha = 0.5: 50% current reading, 50% previous (moderate)
+// alpha = 0.8: Very snappy, just kills high-frequency "buzz"
+float accelAlpha = 0.8;
+float gyroAlpha = 0.9;
+// Storage for the filtered values
+float filtered_ax = 0, filtered_ay = 0, filtered_az = 0;
+float filtered_gx = 0, filtered_gy = 0, filtered_gz = 0;
 
 
 
@@ -348,14 +347,25 @@ void loop() {
         // int16_t rZ = data.gz * 180.0 / M_PI * 100.0;
 
         // Convert accelerometer to milli-g
-        int16_t gX = kf_ax.updateEstimate(data.ax) * 1000.0 / 9.80665;
-        int16_t gY = kf_ay.updateEstimate(data.ay) * 1000.0 / 9.80665;
-        int16_t gZ = kf_az.updateEstimate(data.az) * 1000.0 / 9.80665;
+
+        // Apply Exponential Moving Average (Complementary Filter logic)
+        filtered_ax = (accelAlpha * data.ax) + ((1.0 - accelAlpha) * filtered_ax);
+        filtered_ay = (accelAlpha * data.ay) + ((1.0 - accelAlpha) * filtered_ay);
+        filtered_az = (accelAlpha * data.az) + ((1.0 - accelAlpha) * filtered_az);
+
+        filtered_gx = (gyroAlpha * data.gx) + ((1.0 - gyroAlpha) * filtered_gx);
+        filtered_gy = (gyroAlpha * data.gy) + ((1.0 - gyroAlpha) * filtered_gy);
+        filtered_gz = (gyroAlpha * data.gz) + ((1.0 - gyroAlpha) * filtered_gz);
+
+        // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
+        int16_t gX = filtered_ax * 1000.0 / 9.80665;
+        int16_t gY = filtered_ay * 1000.0 / 9.80665;
+        int16_t gZ = filtered_az * 1000.0 / 9.80665;
 
         // Convert gyro to centi-deg/sec
-        int16_t rX = kf_gx.updateEstimate(data.gx) * 180.0 / M_PI * 100.0;
-        int16_t rY = kf_gy.updateEstimate(data.gy) * 180.0 / M_PI * 100.0;
-        int16_t rZ = kf_gz.updateEstimate(data.gz) * 180.0 / M_PI * 100.0;
+        int16_t rX = filtered_gx * 180.0 / M_PI * 100.0;
+        int16_t rY = filtered_gy * 180.0 / M_PI * 100.0;
+        int16_t rZ = filtered_gz * 180.0 / M_PI * 100.0;
 
         uint8_t payload[80] = {0};
         uint8_t packet[88] = {0};
