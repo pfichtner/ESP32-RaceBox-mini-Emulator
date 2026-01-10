@@ -255,12 +255,30 @@ void setup() {
   pCharacteristicGnss = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_GNSS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
   pCharacteristicGnss->setCallbacks(new GnssCharacteristicCallbacks());
 
+  // Model
+  NimBLECharacteristic* pModel = pService->createCharacteristic("00002A24-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
+  pModel->setValue("RaceBox Mini");
+  // Serial number (last 10 digits of device name)
+  NimBLECharacteristic* pSerial = pService->createCharacteristic("00002A25-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
+  pSerial->setValue(deviceName.length() >= 10 ? deviceName.substring(deviceName.length() - 10) : "0000000000");
+  // Firmware revision
+  NimBLECharacteristic* pFirm = pService->createCharacteristic("00002A26-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
+  pFirm->setValue("3.3");
+  // Hardware revision
+  NimBLECharacteristic* pHardware = pService->createCharacteristic("00002A27-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
+  pHardware->setValue("1");
+  // Manufacturer
+  NimBLECharacteristic* pManufacturer = pService->createCharacteristic("00002A29-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
+  pManufacturer->setValue("RaceBox");
+
   pService->start();
   NimBLEDevice::setDeviceName(deviceName.c_str());
 
   NimBLEAdvertisementData advData;
   advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP); // 0x01
   advData.addServiceUUID(NimBLEUUID(RACEBOX_SERVICE_UUID));           // 0x07
+ // Advertise Device Information Service as well to help official apps discover the device
+  advData.addServiceUUID("0000180a-0000-1000-8000-00805f9b34fb");
   advData.addTxPower();                                               // 0x0A
 
   NimBLEAdvertisementData scanRespData;
@@ -405,6 +423,9 @@ void loop() {
             latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS Altitude, and MSL Altitude
         }
         writeLittleEndian(payload, 66, latLonFlags);
+
+        // Offset 67: Battery status (1 byte) - report 100%
+        writeLittleEndian(payload, 67, (uint8_t)100);
 
         writeLittleEndian(payload, 68, gX);
         writeLittleEndian(payload, 70, gY);
