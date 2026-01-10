@@ -99,7 +99,8 @@ void applyGnssConfig() {
 class MyServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
     deviceConnected = true;
-    Serial.println("✅ BLE Client connected");
+    uint16_t mtu = pServer->getPeerMTU(connInfo.getConnHandle());
+    Serial.printf("✅ BLE Client connected, negotiated MTU = %d\n", mtu);
   }
   void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
     deviceConnected = false;
@@ -243,6 +244,11 @@ void setup() {
   applyGnssConfig();
 
   // --- BLE Setup ---
+  // Do NOT call setMTU() on ESP32-H2 — it crashes. Other ESP32 variants support larger MTU.
+#ifndef CONFIG_IDF_TARGET_ESP32H2
+  // Request a larger MTU to fit an 88-byte packet + headers in one go
+  NimBLEDevice::setMTU(128);
+#endif
   NimBLEDevice::init(deviceName.c_str());
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
