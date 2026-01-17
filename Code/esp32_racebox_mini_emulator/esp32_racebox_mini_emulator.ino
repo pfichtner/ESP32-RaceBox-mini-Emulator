@@ -30,7 +30,39 @@ HardwareSerial GPS_Serial(1); // UART1
 HardwareSerial GPS_Serial(2); // UART2
 #endif
 
-const String deviceName = "RaceBox Mini 0123456789";
+constexpr const char* rawDeviceName = "RaceBox Mini 0123456789";
+constexpr unsigned long MAX_ALLOWED = 3999999999UL;
+
+constexpr int cstrlen(const char* s) {
+    int len = 0;
+    while (s[len] != '\0') ++len;
+    return len;
+}
+
+constexpr bool startsWith(const char* s, const char* prefix) {
+    for (int i = 0; prefix[i] != '\0'; ++i)
+        if (s[i] != prefix[i]) return false;
+    return true;
+}
+
+constexpr unsigned long parseSuffix(const char* name) {
+    if (!startsWith(name, "RaceBox Mini ")) return 0;
+
+    int len = cstrlen(name);
+    if (len < 10) return 0;
+
+    unsigned long val = 0;
+    for (int i = len - 10; i < len; ++i) {
+        char c = name[i];
+        if (c < '0' || c > '9') return 0;
+        val = val * 10 + (c - '0');
+    }
+    return val;
+}
+
+static_assert(parseSuffix(rawDeviceName) <= MAX_ALLOWED, "ERROR: RaceBox Mini number cannot exceed 3999999999");
+static_assert(parseSuffix(rawDeviceName) != 0, "ERROR: Invalid RaceBox Mini device name");
+constexpr const char* deviceName = rawDeviceName;
 
 #if defined(USE_MPU6050)
   #include "Mpu6050Adapter.h"
@@ -248,7 +280,7 @@ void setup() {
   // Request a larger MTU to fit an 88-byte packet + headers in one go
   NimBLEDevice::setMTU(128);
 #endif
-  NimBLEDevice::init(deviceName.c_str());
+  NimBLEDevice::init(deviceName);
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
@@ -265,7 +297,7 @@ void setup() {
   pModel->setValue("RaceBox Mini");
   // Serial number (last 10 digits of device name)
   NimBLECharacteristic* pSerial = pService->createCharacteristic("00002A25-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
-  pSerial->setValue(deviceName.length() >= 10 ? deviceName.substring(deviceName.length() - 10) : "0000000000");
+  pSerial->setValue((strlen(deviceName) >= 10) ? deviceName + strlen(deviceName) - 10 : "0000000000");
   // Firmware revision
   NimBLECharacteristic* pFirm = pService->createCharacteristic("00002A26-0000-1000-8000-00805F9B34FB", NIMBLE_PROPERTY::READ);
   pFirm->setValue("3.3");
@@ -277,7 +309,7 @@ void setup() {
   pManufacturer->setValue("RaceBox");
 
   pService->start();
-  NimBLEDevice::setDeviceName(deviceName.c_str());
+  NimBLEDevice::setDeviceName(deviceName);
 
   NimBLEAdvertisementData advData;
   advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP); // 0x01
@@ -287,7 +319,7 @@ void setup() {
   advData.addTxPower();                                               // 0x0A
 
   NimBLEAdvertisementData scanRespData;
-  scanRespData.setName(deviceName.c_str()); // 0x09: Complete Local Name
+  scanRespData.setName(deviceName); // 0x09: Complete Local Name
   scanRespData.addData({ 0x05, 0x12, 0x20, 0x00, 0x40, 0x00 }); // 0x12
 
   NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
