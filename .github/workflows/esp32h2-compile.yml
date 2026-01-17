@@ -6,13 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       board:
-        description: 'ESP32 board (example: esp32h2_dev)'
+        description: 'ESP32 board (example: esp32h2)'
         required: true
-        default: 'esp32h2_dev'
+        default: 'esp32h2'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      BOARD: ${{ github.event.inputs.board || 'esp32h2' }}
 
     steps:
       - name: Checkout repository
@@ -32,7 +35,7 @@ jobs:
         working-directory: Code/esp32_racebox_mini_emulator
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:${{ github.event.inputs.board }} \
+            --fqbn esp32:esp32:${BOARD} \
             --build-path build \
             esp32_racebox_mini_emulator.ino
 
