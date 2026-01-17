@@ -1,0 +1,38 @@
+name: ESP32 Compile Check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'ESP32 board (example: esp32h2_dev)'
+        required: true
+        default: 'esp32h2_dev'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+        with:
+          version: "1.10.0"
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Compile sketch
+        working-directory: Code/esp32_racebox_mini_emulator
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:${{ github.event.inputs.board }} \
+            --build-path build \
+            esp32_racebox_mini_emulator.ino
+
