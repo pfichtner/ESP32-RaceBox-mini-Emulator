@@ -1,0 +1,8 @@
+Adafruit MPU6050
+Adafruit Unified Sensor
+SparkFun u-blox GNSS Arduino Library@2
+NimBLE-Arduino
+
+ArduinoJson
+Adafruit NeoPixel
+
