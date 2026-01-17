@@ -31,6 +31,12 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
+      - name: Install required libraries
+        working-directory: Code/esp32_racebox_mini_emulator
+        run: |
+          arduino-cli lib update-index
+          arduino-cli lib install --json-path library.json
+
       - name: Compile sketch
         working-directory: Code/esp32_racebox_mini_emulator
         run: |
