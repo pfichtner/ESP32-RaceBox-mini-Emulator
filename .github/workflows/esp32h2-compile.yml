@@ -56,3 +56,8 @@ jobs:
             --build-path build \
             esp32_racebox_mini_emulator.ino
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-build
+          path: Code/esp32_racebox_mini_emulator/build
