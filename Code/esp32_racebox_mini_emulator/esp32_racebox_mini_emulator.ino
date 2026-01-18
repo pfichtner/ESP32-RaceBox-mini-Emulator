@@ -499,7 +499,7 @@ void loop() {
 
         pCharacteristicTx->setValue(packet, 88);
         pCharacteristicTx->notify();
-        delay(20);
+        delay(10);
       }
     }
 
