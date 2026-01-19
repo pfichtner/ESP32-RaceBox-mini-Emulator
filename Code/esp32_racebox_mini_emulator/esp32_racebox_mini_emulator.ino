@@ -83,10 +83,10 @@ const unsigned long accelSampleInterval = 10; // 10ms = 100Hz
 float accelAlpha = 0.8;
 float gyroAlpha = 0.8;
 // Storage for the filtered values
-float filtered_ax = 0, filtered_ay = 0, filtered_az = 0;
-float filtered_gx = 0, filtered_gy = 0, filtered_gz = 0;
-
-
+SensorData filtered = {
+    NAN, NAN, NAN,
+    NAN, NAN, NAN
+};
 
 // --- BLE Configuration ---
 const char* const RACEBOX_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
@@ -260,14 +260,7 @@ void setup() {
     data.flipOverhead();
 #endif
 
-    // Initialize filters with the first real reading so they don't start at zero
-    filtered_ax = data.ax;
-    filtered_ay = data.ay;
-    filtered_az = data.az;
-
-    filtered_gx = data.gx;
-    filtered_gy = data.gy;
-    filtered_gz = data.gz;
+    filtered = data;
   }
 
   GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
@@ -380,13 +373,12 @@ void loop() {
       // Convert accelerometer to milli-g
 
       // Apply Exponential Moving Average (Complementary Filter logic)
-      filtered_ax = (accelAlpha * data.ax) + ((1.0 - accelAlpha) * filtered_ax);
-      filtered_ay = (accelAlpha * data.ay) + ((1.0 - accelAlpha) * filtered_ay);
-      filtered_az = (accelAlpha * data.az) + ((1.0 - accelAlpha) * filtered_az);
+      if (isnan(filtered.ax)) {
+          filtered = data;
+      } else {
+          filtered.applyEMA(data, accelAlpha, gyroAlpha);
+      }
 
-      filtered_gx = (gyroAlpha * data.gx) + ((1.0 - gyroAlpha) * filtered_gx);
-      filtered_gy = (gyroAlpha * data.gy) + ((1.0 - gyroAlpha) * filtered_gy);
-      filtered_gz = (gyroAlpha * data.gz) + ((1.0 - gyroAlpha) * filtered_gz);
     }
   }
 
@@ -412,14 +404,14 @@ void loop() {
         gpsUpdateCount++;
 
         // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        int16_t gX = filtered_ax * 1000.0 / 9.80665;
-        int16_t gY = filtered_ay * 1000.0 / 9.80665;
-        int16_t gZ = filtered_az * 1000.0 / 9.80665;
+        int16_t gX = filtered.ax * 1000.0f / 9.80665f;
+        int16_t gY = filtered.ay * 1000.0f / 9.80665f;
+        int16_t gZ = filtered.az * 1000.0f / 9.80665f;
 
         // Convert gyro to centi-deg/sec
-        int16_t rX = filtered_gx * 180.0 / M_PI * 100.0;
-        int16_t rY = filtered_gy * 180.0 / M_PI * 100.0;
-        int16_t rZ = filtered_gz * 180.0 / M_PI * 100.0;
+        int16_t rX = filtered.gx * 180.0f / M_PI * 100.0f;
+        int16_t rY = filtered.gy * 180.0f / M_PI * 100.0f;
+        int16_t rZ = filtered.gz * 180.0f / M_PI * 100.0f;
 
         uint8_t payload[80] = {0};
         uint8_t packet[88] = {0};
