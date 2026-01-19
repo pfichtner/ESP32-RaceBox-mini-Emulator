@@ -30,7 +30,7 @@ HardwareSerial GPS_Serial(1); // UART1
 HardwareSerial GPS_Serial(2); // UART2
 #endif
 
-constexpr const char* rawDeviceName = "RaceBox Mini 0123456789";
+constexpr const char rawDeviceName[] = "RaceBox Mini 0123456789";
 constexpr unsigned long MAX_ALLOWED = 3999999999UL;
 
 constexpr int cstrlen(const char* s) {
@@ -74,12 +74,14 @@ constexpr const char* deviceName = rawDeviceName;
   #error "You must define either USE_MPU6050 or USE_MPU9250"
 #endif
 
+const unsigned long accelSampleInterval = 10; // 10ms = 100Hz
+
 // --- Smoothing Configuration ---
 // alpha = 1.0: No filtering (raw data)
 // alpha = 0.5: 50% current reading, 50% previous (moderate)
 // alpha = 0.8: Very snappy, just kills high-frequency "buzz"
 float accelAlpha = 0.8;
-float gyroAlpha = 0.9;
+float gyroAlpha = 0.8;
 // Storage for the filtered values
 float filtered_ax = 0, filtered_ay = 0, filtered_az = 0;
 float filtered_gx = 0, filtered_gy = 0, filtered_gz = 0;
@@ -251,6 +253,22 @@ void setup() {
     setLedState(STATE_ERROR);
     while (1) delay(100);
   }
+  SensorData data;
+  if (sensor->read(data)) {
+#ifdef IMU_MOUNTED_OVERHEAD
+    // Flip all axes if board is mounted overhead (180° rotation)
+    data.flipOverhead();
+#endif
+
+    // Initialize filters with the first real reading so they don't start at zero
+    filtered_ax = data.ax;
+    filtered_ay = data.ay;
+    filtered_az = data.az;
+
+    filtered_gx = data.gx;
+    filtered_gy = data.gy;
+    filtered_gz = data.gz;
+  }
 
   GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   if (!myGNSS.begin(GPS_Serial)) {
@@ -336,6 +354,42 @@ void loop() {
   // default to searching while no fix
   uint8_t state = STATE_GNSS_SEARCH;
   myGNSS.checkUblox(); // Required to keep GNSS data flowing
+
+  static unsigned long lastAccelReadMs = 0;
+  // Update accelrometer readings at fixed interval
+  if (millis() - lastAccelReadMs >= accelSampleInterval) {
+    lastAccelReadMs += accelSampleInterval; // Strict timing grid
+
+    SensorData data;
+    if (sensor->read(data)) {
+#ifdef IMU_MOUNTED_OVERHEAD
+      // Flip all axes if board is mounted overhead (180° rotation)
+      data.flipOverhead();
+#endif
+
+      // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
+      // int16_t gX = data.ax * 1000.0 / 9.80665;
+      // int16_t gY = data.ay * 1000.0 / 9.80665;
+      // int16_t gZ = data.az * 1000.0 / 9.80665;
+
+      // // Convert gyro to centi-deg/sec
+      // int16_t rX = data.gx * 180.0 / M_PI * 100.0;
+      // int16_t rY = data.gy * 180.0 / M_PI * 100.0;
+      // int16_t rZ = data.gz * 180.0 / M_PI * 100.0;
+
+      // Convert accelerometer to milli-g
+
+      // Apply Exponential Moving Average (Complementary Filter logic)
+      filtered_ax = (accelAlpha * data.ax) + ((1.0 - accelAlpha) * filtered_ax);
+      filtered_ay = (accelAlpha * data.ay) + ((1.0 - accelAlpha) * filtered_ay);
+      filtered_az = (accelAlpha * data.az) + ((1.0 - accelAlpha) * filtered_az);
+
+      filtered_gx = (gyroAlpha * data.gx) + ((1.0 - gyroAlpha) * filtered_gx);
+      filtered_gy = (gyroAlpha * data.gy) + ((1.0 - gyroAlpha) * filtered_gy);
+      filtered_gz = (gyroAlpha * data.gz) + ((1.0 - gyroAlpha) * filtered_gz);
+    }
+  }
+
   if (myGNSS.getPVT()) {
     static uint32_t lastITOW = 0;
     uint32_t currentITOW = myGNSS.packetUBXNAVPVT->data.iTOW;
@@ -356,38 +410,6 @@ void loop() {
         const unsigned long now = millis();
         lastPacketSendTime = now;
         gpsUpdateCount++;
-
-        SensorData data;
-        // Now that we're sending a packet, read the acceloromter
-        if (!sensor->read(data)) {
-          return;
-        }
-
-#ifdef IMU_MOUNTED_OVERHEAD
-        // Flip all axes if board is mounted overhead (180° rotation)
-        data.flipOverhead();
-#endif
-
-        // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        // int16_t gX = data.ax * 1000.0 / 9.80665;
-        // int16_t gY = data.ay * 1000.0 / 9.80665;
-        // int16_t gZ = data.az * 1000.0 / 9.80665;
-
-        // // Convert gyro to centi-deg/sec
-        // int16_t rX = data.gx * 180.0 / M_PI * 100.0;
-        // int16_t rY = data.gy * 180.0 / M_PI * 100.0;
-        // int16_t rZ = data.gz * 180.0 / M_PI * 100.0;
-
-        // Convert accelerometer to milli-g
-
-        // Apply Exponential Moving Average (Complementary Filter logic)
-        filtered_ax = (accelAlpha * data.ax) + ((1.0 - accelAlpha) * filtered_ax);
-        filtered_ay = (accelAlpha * data.ay) + ((1.0 - accelAlpha) * filtered_ay);
-        filtered_az = (accelAlpha * data.az) + ((1.0 - accelAlpha) * filtered_az);
-
-        filtered_gx = (gyroAlpha * data.gx) + ((1.0 - gyroAlpha) * filtered_gx);
-        filtered_gy = (gyroAlpha * data.gy) + ((1.0 - gyroAlpha) * filtered_gy);
-        filtered_gz = (gyroAlpha * data.gz) + ((1.0 - gyroAlpha) * filtered_gz);
 
         // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
         int16_t gX = filtered_ax * 1000.0 / 9.80665;
