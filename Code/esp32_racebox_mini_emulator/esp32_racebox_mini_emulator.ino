@@ -360,18 +360,6 @@ void loop() {
       data.flipOverhead();
 #endif
 
-      // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-      // int16_t gX = data.ax * 1000.0 / 9.80665;
-      // int16_t gY = data.ay * 1000.0 / 9.80665;
-      // int16_t gZ = data.az * 1000.0 / 9.80665;
-
-      // // Convert gyro to centi-deg/sec
-      // int16_t rX = data.gx * 180.0 / M_PI * 100.0;
-      // int16_t rY = data.gy * 180.0 / M_PI * 100.0;
-      // int16_t rZ = data.gz * 180.0 / M_PI * 100.0;
-
-      // Convert accelerometer to milli-g
-
       // Apply Exponential Moving Average (Complementary Filter logic)
       if (isnan(filtered.ax)) {
           filtered = data;
@@ -402,6 +390,16 @@ void loop() {
         const unsigned long now = millis();
         lastPacketSendTime = now;
         gpsUpdateCount++;
+
+        // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
+        // int16_t gX = filtered.ax * 1000.0 / 9.80665;
+        // int16_t gY = filtered.ay * 1000.0 / 9.80665;
+        // int16_t gZ = filtered.az * 1000.0 / 9.80665;
+
+        // // Convert gyro to centi-deg/sec
+        // int16_t rX = filtered.gx * 180.0 / M_PI * 100.0;
+        // int16_t rY = filtered.gy * 180.0 / M_PI * 100.0;
+        // int16_t rZ = filtered.gz * 180.0 / M_PI * 100.0;
 
         // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
         int16_t gX = filtered.ax * 1000.0f / 9.80665f;
