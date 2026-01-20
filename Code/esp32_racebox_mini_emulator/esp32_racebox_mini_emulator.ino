@@ -292,6 +292,7 @@ void setup() {
   NimBLEDevice::setMTU(128);
 #endif
   NimBLEDevice::init(deviceName);
+  NimBLEDevice::setPower(4);  // Medium BLE transmit power (≈ -3 to 0 dBm) to reduce RF contention and power draw on ESP32-H2
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
