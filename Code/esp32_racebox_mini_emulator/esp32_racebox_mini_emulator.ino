@@ -103,7 +103,7 @@ bool oldDeviceConnected = false;
 
 // --- Packet Timing ---
 unsigned long lastPacketSendTime = 0;
-const unsigned long PACKET_SEND_INTERVAL_MS = 40;
+const unsigned long PACKET_SEND_INTERVAL_MS = 1000 / 25;
 unsigned long lastGpsRateCheckTime = 0;
 unsigned int gpsUpdateCount = 0;
 const unsigned long GPS_RATE_REPORT_INTERVAL_MS = 5000;
@@ -387,9 +387,8 @@ void loop() {
       lastITOW = currentITOW;
       gnssUpdateCount++;
 
-      if (deviceConnected && myGNSS.packetUBXNAVPVT != NULL) {
-        const unsigned long now = millis();
-        lastPacketSendTime = now;
+      if ((deviceConnected && myGNSS.packetUBXNAVPVT != NULL) && (millis() - lastPacketSendTime >= PACKET_SEND_INTERVAL_MS)) {
+        lastPacketSendTime = millis();
         gpsUpdateCount++;
 
         // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
@@ -512,7 +511,6 @@ void loop() {
 
         pCharacteristicTx->setValue(packet, 88);
         pCharacteristicTx->notify();
-        delay(10);
       }
     }
 
