@@ -1,26 +1,11 @@
+#include "BoardConfig.h"
+
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include <NimBLEDevice.h>
 #include "SensorInterface.h"
 #include "Config.h"
 #include "StatusLED.h"
-
-// --- GPS Configuration ---
-#define GPS_RX_PIN 23
-#define GPS_TX_PIN 24
-#define GPS_BAUD 115200
-#define FACTORY_GPS_BAUD 9600
-#define MAX_NAVIGATION_RATE 25
-// #define GPS_SERIAL_PACKET_RATE_DEBUG
-
-// Which sensor to use
-#define USE_MPU6050
-// #define USE_MPU9250
-
-// --- MPU6050/MPU9250 Configuration ---
-#define MPU_SDA_PIN 4
-#define MPU_SCL_PIN 5
-// #define IMU_MOUNTED_OVERHEAD // board is mounted overhead (upside down)
 
 SFE_UBLOX_GNSS myGNSS;
 #ifdef CONFIG_IDF_TARGET_ESP32H2

@@ -1,4 +1,5 @@
 // SensorInterface.h
+#include "BoardConfig.h"
 #pragma once
 
 struct SensorData {
