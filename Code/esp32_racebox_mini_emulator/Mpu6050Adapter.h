@@ -19,7 +19,8 @@ public:
     return true;
   }
 
-  bool read(SensorData& data) override {
+protected:
+  bool readRaw(SensorData& data) override {
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
     data.ax = a.acceleration.x;

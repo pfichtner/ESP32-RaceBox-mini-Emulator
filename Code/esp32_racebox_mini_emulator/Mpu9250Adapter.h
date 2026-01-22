@@ -19,7 +19,8 @@ public:
     return true;
   }
 
-  bool read(SensorData& data) override {
+protected:
+  bool readRaw(SensorData& data) override {
     if (!mpu.Read()) return false;
     data.ax = mpu.accel_mps2()[0];
     data.ay = mpu.accel_mps2()[1];

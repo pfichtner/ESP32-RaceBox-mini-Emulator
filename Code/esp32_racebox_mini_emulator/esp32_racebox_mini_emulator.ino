@@ -20,8 +20,7 @@
 // --- MPU6050/MPU9250 Configuration ---
 #define MPU_SDA_PIN 4
 #define MPU_SCL_PIN 5
-// if board is mounted overhead
-#define IMU_MOUNTED_OVERHEAD
+// #define IMU_MOUNTED_OVERHEAD // board is mounted overhead (upside down)
 
 SFE_UBLOX_GNSS myGNSS;
 #ifdef CONFIG_IDF_TARGET_ESP32H2
@@ -255,11 +254,6 @@ void setup() {
   }
   SensorData data;
   if (sensor->read(data)) {
-#ifdef IMU_MOUNTED_OVERHEAD
-    // Flip all axes if board is mounted overhead (180° rotation)
-    data.flipOverhead();
-#endif
-
     filtered = data;
   }
 
@@ -356,18 +350,12 @@ void loop() {
 
     SensorData data;
     if (sensor->read(data)) {
-#ifdef IMU_MOUNTED_OVERHEAD
-      // Flip all axes if board is mounted overhead (180° rotation)
-      data.flipOverhead();
-#endif
-
       // Apply Exponential Moving Average (Complementary Filter logic)
       if (isnan(filtered.ax)) {
           filtered = data;
       } else {
           filtered.applyEMA(data, accelAlpha, gyroAlpha);
       }
-
     }
   }
 

@@ -48,7 +48,16 @@ struct SensorData {
 class SensorInterface {
 public:
   virtual bool begin() = 0;
-  virtual bool read(SensorData& data) = 0;
-  virtual ~SensorInterface() {}
-};
 
+  virtual bool read(SensorData& data) {
+    if (!readRaw(data)) return false;
+#ifdef IMU_MOUNTED_OVERHEAD
+    data.flipOverhead();
+#endif
+    return true;
+  }
+  virtual ~SensorInterface() {}
+
+protected:
+  virtual bool readRaw(SensorData& data) = 0;
+};
