@@ -458,10 +458,8 @@ void loop() {
         writeLittleEndian(payload, 64, myGNSS.packetUBXNAVPVT->data.pDOP);
 
         // Offset 66: Lat/Lon Flags (RaceBox Protocol) 
-        uint8_t latLonFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.fixType < 2) { // If no 2D/3D fix, then coordinates are considered invalid 
-            latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS Altitude, and MSL Altitude
-        }
+        constexpr uint8_t INVALID_COORDS = 1 << 0;
+        uint8_t latLonFlags = (myGNSS.packetUBXNAVPVT->data.fixType < 2) ? INVALID_COORDS : 0;
         writeLittleEndian(payload, 66, latLonFlags);
 
         // Offset 67: Battery status (1 byte) - report 100%
