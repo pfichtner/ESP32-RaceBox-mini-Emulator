@@ -391,26 +391,6 @@ void loop() {
         lastPacketSendTime = millis();
         gpsUpdateCount++;
 
-        // // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        // int16_t gX = filtered.ax * 1000.0 / 9.80665;
-        // int16_t gY = filtered.ay * 1000.0 / 9.80665;
-        // int16_t gZ = filtered.az * 1000.0 / 9.80665;
-
-        // // Convert gyro to centi-deg/sec
-        // int16_t rX = filtered.gx * 180.0 / M_PI * 100.0;
-        // int16_t rY = filtered.gy * 180.0 / M_PI * 100.0;
-        // int16_t rZ = filtered.gz * 180.0 / M_PI * 100.0;
-
-        // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        int16_t gX = filtered.ax * 1000.0f / 9.80665f;
-        int16_t gY = filtered.ay * 1000.0f / 9.80665f;
-        int16_t gZ = filtered.az * 1000.0f / 9.80665f;
-
-        // Convert gyro to centi-deg/sec
-        int16_t rX = filtered.gx * 180.0f / M_PI * 100.0f;
-        int16_t rY = filtered.gy * 180.0f / M_PI * 100.0f;
-        int16_t rZ = filtered.gz * 180.0f / M_PI * 100.0f;
-
         uint8_t payload[80] = {0};
         uint8_t packet[88] = {0};
 
@@ -485,14 +465,14 @@ void loop() {
         writeLittleEndian(payload, 66, latLonFlags);
 
         // Offset 67: Battery status (1 byte) - report 100%
-        writeLittleEndian(payload, 67, (uint8_t)100);
+        writeLittleEndian(payload, 67, (uint8_t) 100);
 
-        writeLittleEndian(payload, 68, gX);
-        writeLittleEndian(payload, 70, gY);
-        writeLittleEndian(payload, 72, gZ);
-        writeLittleEndian(payload, 74, rX);
-        writeLittleEndian(payload, 76, rY);
-        writeLittleEndian(payload, 78, rZ);
+        writeLittleEndian(payload, 68, ms2_to_millig(filtered.ax));
+        writeLittleEndian(payload, 70, ms2_to_millig(filtered.ay));
+        writeLittleEndian(payload, 72, ms2_to_millig(filtered.az));
+        writeLittleEndian(payload, 74, radps_to_cdegps(filtered.gx));
+        writeLittleEndian(payload, 76, radps_to_cdegps(filtered.gy));
+        writeLittleEndian(payload, 78, radps_to_cdegps(filtered.gz));
 
 
         // Wrap in UBX (standard RaceBox header and checksum)
@@ -540,4 +520,12 @@ void loop() {
     state = STATE_BLE_CONNECTED;
   }
   setLedState(state);
+}
+
+static inline int16_t ms2_to_millig(float a) {
+    return (int16_t)(a * (1000.0f / 9.80665f));
+}
+
+static inline int16_t radps_to_cdegps(float r) {
+    return (int16_t)(r * (180.0f / M_PI * 100.0f));
 }
