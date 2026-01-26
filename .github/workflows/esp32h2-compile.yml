@@ -69,6 +69,7 @@ jobs:
         working-directory: Code/esp32_racebox_mini_emulator
         run: |
           sed -i 's/^#define USE_MPU/\/\/ #define USE_MPU/' BoardConfig.h
+          cat BoardConfig.h
 
       - name: Compile sketch (${{ matrix.mpu }})
         working-directory: Code/esp32_racebox_mini_emulator
