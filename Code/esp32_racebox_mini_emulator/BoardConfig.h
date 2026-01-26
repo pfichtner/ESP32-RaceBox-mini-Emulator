@@ -9,8 +9,8 @@ constexpr int MAX_NAVIGATION_RATE = 25;
 // #define GPS_SERIAL_PACKET_RATE_DEBUG
 
 // Which sensor to use
-// #define USE_MPU6050
-#define USE_MPU9250
+#define USE_MPU6050
+// #define USE_MPU9250
 
 // --- MPU6050/MPU9250 Configuration ---
 constexpr int MPU_SDA_PIN = 4;
