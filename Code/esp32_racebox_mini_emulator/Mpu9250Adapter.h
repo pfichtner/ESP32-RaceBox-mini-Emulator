@@ -1,6 +1,4 @@
 // Mpu9250Adapter.h
-#include "eigen.h"
-#include "units.h"
 using namespace bfs;
 #include "mpu9250.h"
 #include "SensorInterface.h"
