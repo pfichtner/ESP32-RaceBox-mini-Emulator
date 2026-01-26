@@ -55,7 +55,7 @@ constexpr const char* deviceName = rawDeviceName;
   #include "Mpu9250Adapter.h"
   SensorInterface* sensor = new Mpu9250Adapter(&Wire);
 #else
-  #error "You must define either USE_MPU6050 or USE_MPU9250"
+  SensorInterface* sensor = new NullMPUAdapter();
 #endif
 
 const unsigned long accelSampleInterval = 10; // 10ms = 100Hz
