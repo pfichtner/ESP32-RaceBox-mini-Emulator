@@ -10,7 +10,7 @@ public:
   // Default ctor uses &Wire and the default I2C address
   Mpu6050Adapter(TwoWire* wire = &Wire, int addr = MPU6050_I2CADDR_DEFAULT)
     : wire(wire), addr(addr) {}
-public:
+
   bool begin() override {
     if (!mpu.begin()) return false;
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
