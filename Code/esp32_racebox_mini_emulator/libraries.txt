@@ -1,4 +1,9 @@
+# if using MPU6050
 Adafruit MPU6050
+
+# if using MPU6050
+Adafruit MPU6050
+
 Adafruit Unified Sensor
 SparkFun u-blox GNSS Arduino Library@2
 NimBLE-Arduino
