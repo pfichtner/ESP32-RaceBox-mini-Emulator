@@ -17,6 +17,14 @@ jobs:
     env:
       BOARD: ${{ github.event.inputs.board || 'esp32h2' }}
 
+    strategy:
+      fail-fast: false
+      matrix:
+        mpu:
+          - USE_MPU6050
+          - USE_MPU9250
+          - USE_NULL_MPU
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,7 +52,7 @@ jobs:
         working-directory: Code/esp32_racebox_mini_emulator
         run: |
           arduino-cli lib update-index
-      
+
           while IFS= read -r line || [ -n "$line" ]; do
             # Remove leading/trailing spaces
             line="$(echo "$line" | xargs)"
@@ -52,21 +60,27 @@ jobs:
             if [[ -z "$line" ]] || [[ "$line" =~ ^# ]]; then
               continue
             fi
-      
+
             echo "Installing library: $line"
             arduino-cli lib install "$line"
           done < libraries.txt
 
-      - name: Compile sketch
+      - name: Disable hardcoded MPU defines
+        working-directory: Code/esp32_racebox_mini_emulator
+        run: |
+          sed -i 's/^#define USE_MPU/\/\/ #define USE_MPU/' BoardConfig.h
+
+      - name: Compile sketch (${{ matrix.mpu }})
         working-directory: Code/esp32_racebox_mini_emulator
         run: |
           arduino-cli compile \
             --fqbn esp32:esp32:${BOARD} \
-            --build-path build \
+            --build-path build-${{ matrix.mpu }} \
+            --build-property compiler.cpp.extra_flags="-D${{ matrix.mpu }}" \
             esp32_racebox_mini_emulator.ino
 
-      - name: Upload build artifact
+      - name: Upload build artifact (${{ matrix.mpu }})
         uses: actions/upload-artifact@v4
         with:
-          name: esp32-build-${{ env.BOARD }}
-          path: Code/esp32_racebox_mini_emulator/build
+          name: esp32-build-${{ env.BOARD }}-${{ matrix.mpu }}
+          path: Code/esp32_racebox_mini_emulator/build-${{ matrix.mpu }}
