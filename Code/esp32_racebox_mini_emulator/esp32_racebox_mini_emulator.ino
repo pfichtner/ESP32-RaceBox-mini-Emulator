@@ -49,12 +49,15 @@ static_assert(parseSuffix(rawDeviceName) != 0, "ERROR: Invalid RaceBox Mini devi
 constexpr const char* deviceName = rawDeviceName;
 
 #if defined(USE_MPU6050)
+  #pragma message "Building with MPU6050"
   #include "Mpu6050Adapter.h"
   SensorInterface* sensor = new Mpu6050Adapter(&Wire);
 #elif defined(USE_MPU9250)
+  #pragma message "Building with MPU9250"
   #include "Mpu9250Adapter.h"
   SensorInterface* sensor = new Mpu9250Adapter(&Wire);
 #else
+  #pragma message "Building with NullMPUAdapter"
   SensorInterface* sensor = new NullMPUAdapter();
 #endif
 
