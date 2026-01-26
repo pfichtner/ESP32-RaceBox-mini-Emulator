@@ -58,6 +58,7 @@ constexpr const char* deviceName = rawDeviceName;
   SensorInterface* sensor = new Mpu9250Adapter(&Wire);
 #else
   #pragma message "Building with NullMPUAdapter"
+  #include "NullMPUAdapter.h"
   SensorInterface* sensor = new NullMPUAdapter();
 #endif
 
