@@ -1,5 +1,5 @@
-# if using MPU6050
-Adafruit MPU6050
+# if using MPU9250
+Adafruit MPU9250
 
 # if using MPU6050
 Adafruit MPU6050
