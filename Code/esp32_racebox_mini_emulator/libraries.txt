@@ -2,7 +2,8 @@
 Adafruit MPU6050
 
 # if using MPU9250
-Adafruit MPU9250
+Bolder Flight Systems MPU9250
+Bolder Flight Systems Unit Conversions
 
 Adafruit Unified Sensor
 SparkFun u-blox GNSS Arduino Library@2
