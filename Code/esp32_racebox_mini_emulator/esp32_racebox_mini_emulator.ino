@@ -121,7 +121,12 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
     deviceConnected = true;
     uint16_t mtu = pServer->getPeerMTU(connInfo.getConnHandle());
-    Serial.printf("✅ BLE Client connected, negotiated MTU = %d\n", mtu);
+    Serial.printf("✅ BLE Client connected, negotiated MTU = %u (need >= 91 to fit 88-byte notify)\n", mtu);
+    if (mtu < 91) {
+      Serial.printf("  ⚠️ MTU too small! Notifications will be fragmented. "
+                    "Ensure CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247 in sdkconfig for ESP32-H2.\n");
+    }
+    pServer->updateConnParams(connInfo.getConnHandle(), 24, 24, 0, 400);
   }
   void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
     deviceConnected = false;
@@ -139,6 +144,14 @@ public:
         Serial.printf("0x%02X ", c);
       Serial.println();
     }
+  }
+};
+
+class TxCharacteristicCallbacks : public NimBLECharacteristicCallbacks {
+public:
+  void onSubscribe(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo, uint16_t subValue) override {
+    Serial.printf(">> CCCD write on rbTx: 0x%04X (notify %s)\n",
+      subValue, (subValue & 0x0001) ? "ENABLED" : "disabled");
   }
 };
 
@@ -270,9 +283,9 @@ void setup() {
 
   // --- BLE Setup ---
   // Do NOT call setMTU() on ESP32-H2 — it crashes. Other ESP32 variants support larger MTU.
+  // For ESP32-H2, set CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247 in sdkconfig instead.
 #ifndef CONFIG_IDF_TARGET_ESP32H2
-  // Request a larger MTU to fit an 88-byte packet + headers in one go
-  NimBLEDevice::setMTU(128);
+  NimBLEDevice::setMTU(247);
 #endif
   NimBLEDevice::init(deviceName);
   NimBLEDevice::setPower(4);  // Medium BLE transmit power (≈ -3 to 0 dBm) to reduce RF contention and power draw on ESP32-H2
@@ -280,7 +293,8 @@ void setup() {
   pServer->setCallbacks(new MyServerCallbacks());
 
   NimBLEService* pService = pServer->createService(RACEBOX_SERVICE_UUID);
-  pCharacteristicTx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_TX_UUID, NIMBLE_PROPERTY::NOTIFY);
+  pCharacteristicTx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_TX_UUID, NIMBLE_PROPERTY::NOTIFY, 244);
+  pCharacteristicTx->setCallbacks(new TxCharacteristicCallbacks());
   pCharacteristicRx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_RX_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   pCharacteristicRx->setCallbacks(new MyCharacteristicCallbacks());
 
